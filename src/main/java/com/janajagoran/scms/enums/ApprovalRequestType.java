@@ -1,0 +1,13 @@
+package com.janajagoran.scms.enums;
+
+public enum ApprovalRequestType {
+    MEMBER_REGISTRATION,
+    MEMBER_DEACTIVATION,
+    MEMBER_ACTIVATION,
+    DESIGNATION_CREATION,
+    DESIGNATION_ASSIGN,
+    DESIGNATION_RELEASE,
+    SECRETARY_ASSIGN,
+    PRESIDENT_ASSIGN,
+    ROLE_CHANGE
+}
