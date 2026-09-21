@@ -12,11 +12,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-/**
- * Handles file uploads for profile pictures, gallery images, event images, and notice attachments.
- * Defaults to local disk storage; swap in Cloudinary by implementing the same interface
- * (see application.properties -> app.storage.provider).
- */
 @Slf4j
 @Service
 public class FileStorageService {
@@ -24,32 +19,90 @@ public class FileStorageService {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
+    /**
+     * Backend public URL.
+     * Example:
+     * https://jana-jagoran-club-scms.onrender.com
+     */
+    @Value("${app.backend.url}")
+    private String backendUrl;
+
+    /**
+     * Store uploaded file and return its public URL.
+     */
     public String store(MultipartFile file, String subFolder) {
         try {
-            String originalName = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
-            String extension = originalName.contains(".") ? originalName.substring(originalName.lastIndexOf(".")) : "";
+            String originalName = StringUtils.cleanPath(
+                    file.getOriginalFilename() != null
+                            ? file.getOriginalFilename()
+                            : "file"
+            );
+
+            String extension = originalName.contains(".")
+                    ? originalName.substring(originalName.lastIndexOf("."))
+                    : "";
+
             String newFileName = UUID.randomUUID() + extension;
 
-            Path targetDir = Paths.get(uploadDir, subFolder).toAbsolutePath().normalize();
+            Path targetDir = Paths.get(uploadDir, subFolder)
+                    .toAbsolutePath()
+                    .normalize();
+
             Files.createDirectories(targetDir);
 
             Path targetPath = targetDir.resolve(newFileName);
+
             Files.copy(file.getInputStream(), targetPath);
 
-            return "/uploads/" + subFolder + "/" + newFileName;
+            // Public URL
+            return backendUrl.replaceAll("/$", "")
+                    + "/uploads/"
+                    + subFolder
+                    + "/"
+                    + newFileName;
+
         } catch (IOException e) {
             log.error("Failed to store file", e);
-            throw new RuntimeException("Failed to store file: " + e.getMessage());
+            throw new RuntimeException(
+                    "Failed to store file: " + e.getMessage()
+            );
         }
     }
 
-    public void delete(String relativeUrl) {
+    /**
+     * Delete uploaded file.
+     *
+     * Supports both:
+     * /uploads/gallery/file.jpg
+     *
+     * and:
+     * https://jana-jagoran-club-scms.onrender.com/uploads/gallery/file.jpg
+     */
+    public void delete(String fileUrl) {
         try {
-            if (relativeUrl == null || !relativeUrl.startsWith("/uploads/")) return;
-            Path path = Paths.get(uploadDir, relativeUrl.substring("/uploads/".length())).toAbsolutePath().normalize();
+            if (fileUrl == null || fileUrl.isBlank()) {
+                return;
+            }
+
+            String relativePath;
+
+            // Full URL
+            if (fileUrl.contains("/uploads/")) {
+                relativePath = fileUrl.substring(
+                        fileUrl.indexOf("/uploads/") + "/uploads/".length()
+                );
+            } else {
+                return;
+            }
+
+            Path path = Paths.get(uploadDir, relativePath)
+                    .toAbsolutePath()
+                    .normalize();
+
             Files.deleteIfExists(path);
+
         } catch (IOException e) {
-            log.warn("Failed to delete file {}", relativeUrl, e);
+            log.warn("Failed to delete file {}", fileUrl, e);
         }
     }
 }
