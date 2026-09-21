@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Uploaded files ###
+# uploads/    <-- DON'T add this if you want images tracked by Git
